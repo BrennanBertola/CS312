@@ -17,7 +17,7 @@ BLUE = (0,0,255)
 
 # Global variable that controls the speed of the recursion automation, in seconds
 #
-PAUSE = 0.25
+PAUSE = 2
 
 class Node:
 	def __init__(self, data=None):
@@ -26,7 +26,8 @@ class Node:
 		self.ccwNode = None
 
 class Hull:
-	def __init__(self):
+	def __init__(self, origPoints):
+		self.origPoints = origPoints
 		self.leftMost = None
 		self.rightMost = None
 
@@ -89,7 +90,18 @@ class ConvexHullSolver(QObject):
 		# this is a dummy polygon of the first 3 unsorted points
 		#polygon = [QLineF(points[i],points[(i+1)%3]) for i in range(3)]
 		# TODO: REPLACE THE LINE ABOVE WITH A CALL TO YOUR DIVIDE-AND-CONQUER CONVEX HULL SOLVER
-		hullDC(points)
+		finalHull = self.hullDC(points)
+
+		mapPoints = []
+		currNode = finalHull.leftMost
+		while True:
+			mapPoints.append(currNode.data)
+			currNode = currNode.cwNode
+			if currNode == finalHull.leftMost:
+				break
+
+		polygon = [QLineF(mapPoints[i], mapPoints[(i + 1) % len(mapPoints)]) for i in range(len(mapPoints))]
+		self.showHull(polygon, RED)
 
 		t4 = time.time()
 
@@ -99,48 +111,65 @@ class ConvexHullSolver(QObject):
 		self.showText('Time Elapsed (Convex Hull): {:3.3f} sec'.format(t4-t3))
 
 
-def hullDC(points): #O(n^2)
-	splitPoints = []
-	for i in range(0, len(points), 3):
-		splitPoints.append(points[i:i + 3])
+	def hullDC(self, points): #O(n)
+		splitPoints = []
 
-	dividedHulls = []
-	for i in range(len(splitPoints)):
-		dividedHulls.append(createHull(splitPoints[i]))
+		# start by splitting points into groups of 3 from left most to right most(how prof. said he did it)
+		for i in range(0, len(points), 3):
+			splitPoints.append(points[i:i + 3])
 
-	return None
+		# creates the lowest level hull of size 3 or less
+		dividedHulls = []
+		for i in range(len(splitPoints)):
+			dividedHulls.append(self.createHull(splitPoints[i]))
 
-def createHull(points): #O(n)
-	hull = Hull();
-	hull.leftMost = Node(points[0])
+		#combines the divided hull one by one
+		finalHull = dividedHulls[0]
+		for i in range (1, len(dividedHulls)):
+			finalHull = self.combineHulls(finalHull, dividedHulls[i])
 
-	if len(points) == 1:
-		hull.rightMost = hull.leftMost
+		return finalHull
+
+	def createHull(self, points): #O(2) constant because at most 3 points are passed in with loops of n - 1
+		hull = Hull(points);
+		hull.leftMost = Node(points[0])
+
+		if len(points) == 1: #if only one point that point is the left and right most
+			hull.rightMost = hull.leftMost
+			hull.leftMost.cwNode = hull.leftMost
+			hull.leftMost.ccwNode = hull.leftMost
+			return hull #return now, no need to find cw orientation
+		hull.rightMost = Node(points[-1])
+
+		#finds slope of leftmost point to all other points
+		slopes = []
+		for i in range(1, len(points)):
+			slope = (points[i].y() - points[0].y())/(points[i].x() - points[0].x())
+			slopes.append([slope, i])
+
+		#sorts slope from largest to smallest
+		slopes.sort(reverse=True, key=lambda k : k[0])
+
+		#builds linked list based off of slopes for cw/ccw orientation
+		currNode = hull.leftMost
+		prevNode = hull.leftMost
+		for i in range(len(slopes)):
+			index = slopes[i][1]
+			if index == len(points) - 1:
+				currNode.cwNode = hull.rightMost
+				prevNode = currNode
+				currNode = prevNode.cwNode
+				currNode.ccwNode = prevNode
+			else:
+				currNode.cwNode = Node(points[slopes[i][1]])
+				prevNode = currNode
+				currNode = prevNode.cwNode
+				currNode.ccwNode = prevNode
+		currNode.cwNode = hull.leftMost
+		hull.leftMost.ccwNode = currNode
+
 		return hull
-	hull.rightMost = Node(points[-1])
 
-	slopes = []
-	for i in range(1, len(points)):
-		slope = (points[i].y() - points[0].y())/(points[i].x() - points[0].x())
-		slopes.append([slope, i])
+	def combineHulls(self, hullL, hullR):
 
-	slopes.sort(reverse=True, key=lambda k : k[0])
-	currNode = hull.leftMost
-	prevNode = hull.leftMost
-	for i in range(len(slopes)):
-		index = slopes[i][1]
-		if index == len(points) - 1:
-			currNode.cwNode = hull.rightMost
-			prevNode = currNode
-			currNode = prevNode.cwNode
-			currNode.ccwNode = prevNode
-		else:
-			currNode.cwNode = Node(points[slopes[i][1]])
-			prevNode = currNode
-			currNode = prevNode.cwNode
-			currNode.ccwNode = prevNode
-	currNode.cwNode = hull.leftMost
-	hull.leftMost.ccwNode = currNode
-
-	return hull
-
+		return hullR
