@@ -26,8 +26,7 @@ class Node:
 		self.ccwNode = None
 
 class Hull:
-	def __init__(self, origPoints):
-		self.origPoints = origPoints
+	def __init__(self):
 		self.leftMost = None
 		self.rightMost = None
 
@@ -115,7 +114,7 @@ class ConvexHullSolver(QObject):
 
 		#if there is only 1 point then it is ready to make the hull
 		if len(points) <= 1:
-			return self.createHull(points)
+			return self.createHull(points[0])
 
 		#finds half the length then calls itself recursively on each half
 		l = len(points)//2
@@ -124,11 +123,11 @@ class ConvexHullSolver(QObject):
 
 		return self.combineHulls(hullL, hullR)
 
-	def createHull(self, points): #O(1)
-		hull = Hull(points)
+	def createHull(self, point): #O(1)
+		hull = Hull()
 
 		#creates hull out of 1 point so that one point is both right and left most within divided hull
-		hull.leftMost = Node(points[0])
+		hull.leftMost = Node(point)
 		hull.rightMost = hull.leftMost
 
 		#since hull is only 1 point it is cw and ccw to itself
@@ -138,7 +137,6 @@ class ConvexHullSolver(QObject):
 
 	def combineHulls(self, hullL, hullR): #O(2n^2) ~ O(n^2)
 		newHull = hullL
-		newHull.origPoints += hullR.origPoints
 
 		topR, topL = self.upperTangent(hullL, hullR) #finds 2 Nodes of upper tangent
 		botR, botL = self.lowerTangent(hullL, hullR) #finds 2 Nodes of lower tangent
