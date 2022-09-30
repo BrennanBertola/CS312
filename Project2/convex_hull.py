@@ -110,7 +110,7 @@ class ConvexHullSolver(QObject):
 		self.showText('Time Elapsed (Convex Hull): {:3.3f} sec'.format(t4-t3))
 
 
-	def hullDC(self, points):
+	def hullDC(self, points): #a=2 b=2 d=1 O(nlog(n))
 
 		#if there is only 1 point then it is ready to make the hull
 		if len(points) <= 1:
@@ -121,7 +121,7 @@ class ConvexHullSolver(QObject):
 		hullL = self.hullDC(points[:l])
 		hullR = self.hullDC(points[l:])
 
-		return self.combineHulls(hullL, hullR)
+		return self.combineHulls(hullL, hullR) #O(n)
 
 	def createHull(self, point): #O(1)
 		hull = Hull()
@@ -135,7 +135,7 @@ class ConvexHullSolver(QObject):
 		hull.leftMost.ccwNode = hull.leftMost
 		return hull
 
-	def combineHulls(self, hullL, hullR): #O(2n^2) ~ O(n^2)
+	def combineHulls(self, hullL, hullR): #O(n)
 		newHull = hullL
 
 		topR, topL = self.upperTangent(hullL, hullR) #finds 2 Nodes of upper tangent
@@ -151,7 +151,7 @@ class ConvexHullSolver(QObject):
 
 		return newHull
 
-	def upperTangent(self, hullL, hullR): #O(n^2)?
+	def upperTangent(self, hullL, hullR): #O(n)
 		lPoint = hullL.rightMost
 		rPoint = hullR.leftMost
 
@@ -187,7 +187,7 @@ class ConvexHullSolver(QObject):
 
 		return lPoint, rPoint
 
-	def lowerTangent(self, hullL, hullR): #O(n^2)
+	def lowerTangent(self, hullL, hullR): #O(n)
 		lPoint = hullL.rightMost
 		rPoint = hullR.leftMost
 
@@ -225,4 +225,3 @@ class ConvexHullSolver(QObject):
 
 	def line(self, l, r): #O(1), returns slope between 2 points
 		return (r.y() - l.y()) / (r.x() - l.x())
-
