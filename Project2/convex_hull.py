@@ -26,8 +26,7 @@ class Node:
 		self.ccwNode = None
 
 class Hull:
-	def __init__(self, origPoints):
-		self.origPoints = origPoints
+	def __init__(self):
 		self.leftMost = None
 		self.rightMost = None
 
@@ -111,65 +110,118 @@ class ConvexHullSolver(QObject):
 		self.showText('Time Elapsed (Convex Hull): {:3.3f} sec'.format(t4-t3))
 
 
-	def hullDC(self, points): #O(n)
-		splitPoints = []
+	def hullDC(self, points): #a=2 b=2 d=1 O(nlog(n))
 
-		# start by splitting points into groups of 3 from left most to right most(how prof. said he did it)
-		for i in range(0, len(points), 3):
-			splitPoints.append(points[i:i + 3])
+		#if there is only 1 point then it is ready to make the hull
+		if len(points) <= 1:
+			return self.createHull(points[0])
 
-		# creates the lowest level hull of size 3 or less
-		dividedHulls = []
-		for i in range(len(splitPoints)):
-			dividedHulls.append(self.createHull(splitPoints[i]))
+		#finds half the length then calls itself recursively on each half
+		l = len(points)//2
+		hullL = self.hullDC(points[:l])
+		hullR = self.hullDC(points[l:])
 
-		#combines the divided hull one by one
-		finalHull = dividedHulls[0]
-		for i in range (1, len(dividedHulls)):
-			finalHull = self.combineHulls(finalHull, dividedHulls[i])
+		return self.combineHulls(hullL, hullR) #O(n)
 
-		return finalHull
+	def createHull(self, point): #O(1)
+		hull = Hull()
 
-	def createHull(self, points): #O(2) constant because at most 3 points are passed in with loops of n - 1
-		hull = Hull(points);
-		hull.leftMost = Node(points[0])
+		#creates hull out of 1 point so that one point is both right and left most within divided hull
+		hull.leftMost = Node(point)
+		hull.rightMost = hull.leftMost
 
-		if len(points) == 1: #if only one point that point is the left and right most
-			hull.rightMost = hull.leftMost
-			hull.leftMost.cwNode = hull.leftMost
-			hull.leftMost.ccwNode = hull.leftMost
-			return hull #return now, no need to find cw orientation
-		hull.rightMost = Node(points[-1])
-
-		#finds slope of leftmost point to all other points
-		slopes = []
-		for i in range(1, len(points)):
-			slope = (points[i].y() - points[0].y())/(points[i].x() - points[0].x())
-			slopes.append([slope, i])
-
-		#sorts slope from largest to smallest
-		slopes.sort(reverse=True, key=lambda k : k[0])
-
-		#builds linked list based off of slopes for cw/ccw orientation
-		currNode = hull.leftMost
-		prevNode = hull.leftMost
-		for i in range(len(slopes)):
-			index = slopes[i][1]
-			if index == len(points) - 1:
-				currNode.cwNode = hull.rightMost
-				prevNode = currNode
-				currNode = prevNode.cwNode
-				currNode.ccwNode = prevNode
-			else:
-				currNode.cwNode = Node(points[slopes[i][1]])
-				prevNode = currNode
-				currNode = prevNode.cwNode
-				currNode.ccwNode = prevNode
-		currNode.cwNode = hull.leftMost
-		hull.leftMost.ccwNode = currNode
-
+		#since hull is only 1 point it is cw and ccw to itself
+		hull.leftMost.cwNode = hull.leftMost
+		hull.leftMost.ccwNode = hull.leftMost
 		return hull
 
-	def combineHulls(self, hullL, hullR):
+	def combineHulls(self, hullL, hullR): #O(n)
+		newHull = hullL
 
-		return hullR
+		topR, topL = self.upperTangent(hullL, hullR) #finds 2 Nodes of upper tangent
+		botR, botL = self.lowerTangent(hullL, hullR) #finds 2 Nodes of lower tangent
+
+		#connects the Nodes of the upper and lower tangents within the linked list
+		topR.cwNode = topL
+		topL.ccwNode = topR
+		botR.ccwNode = botL
+		botL.cwNode = botR
+
+		newHull.rightMost = hullR.rightMost
+
+		return newHull
+
+	def upperTangent(self, hullL, hullR): #O(n)
+		lPoint = hullL.rightMost
+		rPoint = hullR.leftMost
+
+		prevLine = self.line(lPoint.data, rPoint.data)
+		done = 0
+
+		while True: #repeats inner process till no changes are made
+			done = 1
+			while True: #rotates ccw around left hull until tmp line is no longer smaller then prev line
+				tmpPoint = lPoint.ccwNode
+				tmpLine = self.line(tmpPoint.data, rPoint.data)
+
+				if tmpLine < prevLine:
+					lPoint = tmpPoint
+					prevLine = tmpLine
+					done = 0
+				else:
+					break
+
+			while True: #rotates cw around right hull until tmp line is no longer bigger then prev line
+				tmpPoint = rPoint.cwNode
+				tmpLine = self.line(lPoint.data, tmpPoint.data)
+
+				if tmpLine > prevLine:
+					rPoint = tmpPoint
+					prevLine = tmpLine
+					done = 0
+				else:
+					break
+
+			if done:
+				break
+
+		return lPoint, rPoint
+
+	def lowerTangent(self, hullL, hullR): #O(n)
+		lPoint = hullL.rightMost
+		rPoint = hullR.leftMost
+
+		prevLine = self.line(lPoint.data, rPoint.data)
+		done = 0
+
+		while True: #repeats inner process till no changes are made
+			done = 1
+			while True: #rotates cw around left hull until tmp line is no longer bigger then prev line
+				tmpPoint = lPoint.cwNode
+				tmpLine = self.line(tmpPoint.data, rPoint.data)
+
+				if tmpLine > prevLine:
+					lPoint = tmpPoint
+					prevLine = tmpLine
+					done = 0
+				else:
+					break
+
+			while True: #rotates ccw around right hull until tmp line is no longer smaller then prev line
+				tmpPoint = rPoint.ccwNode
+				tmpLine = self.line(lPoint.data, tmpPoint.data)
+
+				if tmpLine < prevLine:
+					rPoint = tmpPoint
+					prevLine = tmpLine
+					done = 0
+				else:
+					break
+
+			if done: #breaks outer while loop because no changes were made
+				break
+
+		return lPoint, rPoint
+
+	def line(self, l, r): #O(1), returns slope between 2 points
+		return (r.y() - l.y()) / (r.x() - l.x())
