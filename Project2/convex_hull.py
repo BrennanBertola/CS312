@@ -136,8 +136,6 @@ class ConvexHullSolver(QObject):
 		return hull
 
 	def combineHulls(self, hullL, hullR): #O(n)
-		newHull = hullL
-
 		topR, topL = self.upperTangent(hullL, hullR) #finds 2 Nodes of upper tangent
 		botR, botL = self.lowerTangent(hullL, hullR) #finds 2 Nodes of lower tangent
 
@@ -147,9 +145,9 @@ class ConvexHullSolver(QObject):
 		botR.ccwNode = botL
 		botL.cwNode = botR
 
-		newHull.rightMost = hullR.rightMost
+		hullL.rightMost = hullR.rightMost
 
-		return newHull
+		return hullL
 
 	def upperTangent(self, hullL, hullR): #O(n)
 		lPoint = hullL.rightMost
