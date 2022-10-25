@@ -31,7 +31,7 @@ class arrayQueue:
         return minIndex
 
 
-    def decreaseKey(self, key, item): #O(n)
+    def decreaseKey(self, key, item): #O(1)
         self.queue[key] = item
 
     def isEmpty(self):
@@ -132,7 +132,7 @@ class NetworkRoutingSolver:
         self.network = network
 
 
-    def getShortestPath( self, destIndex ):
+    def getShortestPath( self, destIndex ): #O(n)
         self.dest = destIndex
 
         path_edges = []
@@ -149,15 +149,17 @@ class NetworkRoutingSolver:
             path_edges.append( (edge.src.loc, edge.dest.loc, '{:.0f}'.format(edge.length)) )
             total_length += edge.length
             currNode = edge.src
-            if (currNode.node_id == self.source):
+            if (currNode.node_id == self.source): #if at source node break
                 break
 
         return {'cost':total_length, 'path':path_edges}
 
+    #time complexity depends on type of queue, explained in write up.
     def computeShortestPaths( self, srcIndex, use_heap=False ):
         self.source = srcIndex
         t1 = time.time()
 
+        #declares dist and prev values for later use
         self.dist = [None] * len(self.network.getNodes())
         self.prev = [None] * len(self.network.getNodes())
 
