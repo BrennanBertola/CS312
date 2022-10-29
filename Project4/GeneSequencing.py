@@ -33,7 +33,7 @@ class GeneSequencing:
 		if val1 == val2: return -3
 		else: return 1
 
-	def unrestrictedRun(self, iLen, jLen, seq1, seq2): #O(mn) ~ O(n^2)
+	def unrestrictedRun(self, iLen, jLen, seq1, seq2): #O(mn)
 		matrix = {}
 		for i in range(iLen): #base cases
 			matrix[i, 0] = i*5
@@ -149,11 +149,16 @@ class GeneSequencing:
 			score = float("inf")
 			alignment1 = "No Alignment Possible."
 			alignment2 = "No Alignment Possible."
-		elif banded: #O(kn + n) ~ O(kn)
-			score = self.bandedRun(iLen, jLen, seq1, seq2) #O(kn)
-			alignment1, alignment2 = self.getAlign(iLen, jLen, seq1, seq2) #O(n)
-		else: #O(mn + n) ~ O(mn) ~ O(n^2)
-			score = self.unrestrictedRun(iLen, jLen, seq1, seq2) #O(mn) ~ O(n^2)
+		if banded: #O(kn + n) ~ O(kn)
+			if iLen - jLen > 3 or jLen - iLen > 3:
+				score = float("inf")
+				alignment1 = "No Alignment Possible."
+				alignment2 = "No Alignment Possible."
+			else:
+				score = self.bandedRun(iLen, jLen, seq1, seq2) #O(kn)
+				alignment1, alignment2 = self.getAlign(iLen, jLen, seq1, seq2) #O(n)
+		else: #O(mn + n) ~ O(mn)
+			score = self.unrestrictedRun(iLen, jLen, seq1, seq2) #O(mn)
 			alignment1, alignment2 = self.getAlign(iLen, jLen, seq1, seq2) #O(n)
 
 
