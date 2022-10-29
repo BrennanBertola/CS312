@@ -29,73 +29,77 @@ class GeneSequencing:
 # This is the method called by the GUI.  _seq1_ and _seq2_ are two sequences to be aligned, _banded_ is a boolean that tells
 # you whether you should compute a banded alignment or full alignment, and _align_length_ tells you 
 # how many base pairs to use in computing the alignment
-	def diff(self, val1, val2):
+	def diff(self, val1, val2): #O(1) used to check if it's a match or subsitution
 		if val1 == val2: return -3
 		else: return 1
 
-	def unrestrictedRun(self, iLen, jLen, seq1, seq2):
+	def unrestrictedRun(self, iLen, jLen, seq1, seq2): #O(mn) ~ O(n^2)
 		matrix = {}
-		for i in range(iLen):
+		for i in range(iLen): #base cases
 			matrix[i, 0] = i*5
 			self.backArrows[i, 0] = (i-1, 0)
-		for j in range(jLen):
+		for j in range(jLen): #base cases
 			matrix[0, j] = j*5
 			self.backArrows[0, j] = (0, j-1)
-		for i in range(1, iLen):
-			for j in range(1, jLen):
+		for i in range(1, iLen): #by row
+			for j in range(1, jLen): #by col
+				#order of checked cells matters to enforce precedence(default is diagonal)
 				minVal = self.diff(seq1[i - 1], seq2[j - 1]) + matrix[i - 1, j - 1]
 				backArrow = (i-1, j-1)
-				if (5+matrix[i-1,j] <= minVal):
+				if (5+matrix[i-1,j] <= minVal): #checks cell above
 					minVal = 5+matrix[i-1,j]
 					backArrow = (i-1, j)
-				if (5 + matrix[i, j - 1] <= minVal):
+				if (5 + matrix[i, j - 1] <= minVal): #checks cell to left
 					minVal = 5 + matrix[i, j - 1]
 					backArrow = (i, j-1)
 				matrix[i,j] = minVal
-				self.backArrows[i, j] = backArrow
+				self.backArrows[i, j] = backArrow #trace used for alignment
 
 		return matrix[iLen-1, jLen-1]
 
-	def bandedRun(self, iLen, jLen, seq1, seq2):
+	def bandedRun(self, iLen, jLen, seq1, seq2): #O(kn) where k = 2d+1
 		matrix = {}
 		d = 3
 
-		for i in range(d+1):
+		for i in range(d+1): #base case
 			matrix[i, 0] = i*5
 			self.backArrows[i, 0] = (i-1, 0)
-		for j in range(d+1):
+		for j in range(d+1): #base case
 			matrix[0, j] = j*5
 			self.backArrows[0, j] = (0, j-1)
-		for i in range(1, iLen):
-			for j in range(-d + i, d + i + 1):
+		for i in range(1, iLen): #row
+			for j in range(-d + i, d + i + 1): #cols (only 2d+1 cols per row)
+				#next 2 if statements are used to ensure j is within the table
 				if(j < 1):
 					continue
 				if (j > jLen - 1):
 					continue
 
+				#order of checked cells matters to enforce precedence(default is diagonal)
 				minVal = self.diff(seq1[i - 1], seq2[j - 1]) + matrix[i - 1, j - 1]
 				backArrow = (i-1, j-1)
-				if (i-1, j) in matrix:
-					if (5+matrix[i-1,j] <= minVal):
+				if (i-1, j) in matrix: #ensure cell above was calculated
+					if (5+matrix[i-1,j] <= minVal): #checks cell above
 						minVal = 5+matrix[i-1,j]
 						backArrow = (i-1, j)
-				if (i, j-1) in matrix:
-					if (5 + matrix[i, j - 1] <= minVal):
+				if (i, j-1) in matrix: #ensure cell to the left was calculated
+					if (5 + matrix[i, j - 1] <= minVal): #checks cell to left
 						minVal = 5 + matrix[i, j - 1]
 						backArrow = (i, j-1)
 				matrix[i,j] = minVal
-				self.backArrows[i, j] = backArrow
+				self.backArrows[i, j] = backArrow #trace used for alignment
 
 		return matrix[iLen-1, jLen-1]
 
-	def getAlign(self, iLen, jLen, seq1, seq2):
+	def getAlign(self, iLen, jLen, seq1, seq2): #O(n)
 		newSeq1 = seq1
 		newSeq2 = seq2
 		operations = []
 
 		currCell = (iLen-1, jLen-1)
 
-		while currCell != (0, 0): #builds a list for what operations were used at what index of the seq
+		# builds a list for what operations were used at what index of the seq
+		while currCell != (0, 0): #O(n) where n is the longer of the 2 sequences
 			fromCell = self.backArrows.get(currCell)
 			iDiff = currCell[0] - fromCell[0]
 			jDiff = currCell[1] - fromCell[1]
@@ -113,6 +117,7 @@ class GeneSequencing:
 		if len(operations) < length:
 			length = len(operations)
 
+		#O(100) ~ O(1) fixed loop that can't iterate more than 100 times
 		for i in range(length):
 			if operations[i] == 0:
 				pass
@@ -126,7 +131,7 @@ class GeneSequencing:
 		return newSeq1, newSeq2
 
 
-	def align( self, seq1, seq2, banded, align_length):
+	def align( self, seq1, seq2, banded, align_length): #banded: O(kn), unrestricted: O(n^2)
 		self.banded = banded
 		self.MaxCharactersToAlign = align_length
 		self.backArrows = {}
@@ -140,16 +145,16 @@ class GeneSequencing:
 
 
 
-		if iLen - jLen > 3 or jLen - iLen > 3:
+		if iLen - jLen > 3 or jLen - iLen > 3: #O(1)
 			score = float("inf")
 			alignment1 = "No Alignment Possible."
 			alignment2 = "No Alignment Possible."
-		elif banded:
-			score = self.bandedRun(iLen, jLen, seq1, seq2)
-			alignment1, alignment2 = self.getAlign(iLen, jLen, seq1, seq2)
-		else:
-			score = self.unrestrictedRun(iLen, jLen, seq1, seq2)
-			alignment1, alignment2 = self.getAlign(iLen, jLen, seq1, seq2)
+		elif banded: #O(kn + n) ~ O(kn)
+			score = self.bandedRun(iLen, jLen, seq1, seq2) #O(kn)
+			alignment1, alignment2 = self.getAlign(iLen, jLen, seq1, seq2) #O(n)
+		else: #O(mn + n) ~ O(mn) ~ O(n^2)
+			score = self.unrestrictedRun(iLen, jLen, seq1, seq2) #O(mn) ~ O(n^2)
+			alignment1, alignment2 = self.getAlign(iLen, jLen, seq1, seq2) #O(n)
 
 
 ###################################################################################################
