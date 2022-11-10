@@ -82,35 +82,46 @@ class TSPSolver:
 		algorithm</returns> 
 	'''
 
-	def greedy( self,time_allowance=60.0 ):
+	def greedy( self,time_allowance=60.0 ): #O(n^3)
 		cities = self._scenario.getCities()
 		bssf = None
 		results = {}
 		start_time = time.time()
+		startCity = 0
+		count = 0
 
-		route = [cities[0]]
-		visted = {cities[0]}
-		currCity = cities[0]
-		while len(route) < len(cities) and time.time()-start_time < time_allowance:
-			min = math.inf
-			minCity = currCity
-			for j in range(len(cities)):
-				city = cities[j]
-				if visted.__contains__(city):
-					continue
-				if currCity.costTo(city)<min:
-					min = currCity.costTo(city)
-					minCity = city
-			route.append(minCity)
-			visted.add(minCity)
-			currCity = minCity
+		while startCity < len(cities) and time.time()-start_time < time_allowance: #tries to find a solution starting at each city
+			route = [cities[startCity]]
+			visted = {cities[startCity]}
+			currCity = cities[startCity]
 
-		bssf = TSPSolution(route)
+			while len(route) < len(cities): #loops till all cities have been added
+				min = math.inf
+				minCity = currCity
+				for j in range(len(cities)): #finds cheapest edge
+					city = cities[j]
+					if visted.__contains__(city):
+						continue
+					if currCity.costTo(city)<min:
+						min = currCity.costTo(city)
+						minCity = city
+				route.append(minCity)
+				visted.add(minCity)
+				currCity = minCity
+
+			solution = TSPSolution(route)
+			if solution.cost < np.inf: #checks if its a valid route
+				count += 1
+			if bssf == None: #if no bssf then set bssf regarless of solution
+				bssf = solution
+			elif solution.cost < bssf.cost: #if solution is better than current bssf
+				bssf = solution
+			startCity += 1
+
 		end_time = time.time()
-
 		results['cost'] = bssf.cost
 		results['time'] = end_time - start_time
-		results['count'] = 1
+		results['count'] = count
 		results['soln'] = bssf
 		results['max'] = None
 		results['total'] = None
@@ -130,7 +141,7 @@ class TSPSolver:
 	'''
 		
 	def branchAndBound( self, time_allowance=60.0 ):
-		bssf = self.defaultRandomTour(time_allowance)
+		bssf = self.greedy(time_allowance)
 
 		pass
 
