@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import math
 
 from which_pyqt import PYQT_VER
 if PYQT_VER == 'PYQT5':
@@ -82,7 +83,40 @@ class TSPSolver:
 	'''
 
 	def greedy( self,time_allowance=60.0 ):
-		pass
+		cities = self._scenario.getCities()
+		bssf = None
+		results = {}
+		start_time = time.time()
+
+		route = [cities[0]]
+		visted = {cities[0]}
+		currCity = cities[0]
+		while len(route) < len(cities) and time.time()-start_time < time_allowance:
+			min = math.inf
+			minCity = currCity
+			for j in range(len(cities)):
+				city = cities[j]
+				if visted.__contains__(city):
+					continue
+				if currCity.costTo(city)<min:
+					min = currCity.costTo(city)
+					minCity = city
+			route.append(minCity)
+			visted.add(minCity)
+			currCity = minCity
+
+		bssf = TSPSolution(route)
+		end_time = time.time()
+
+		results['cost'] = bssf.cost
+		results['time'] = end_time - start_time
+		results['count'] = 1
+		results['soln'] = bssf
+		results['max'] = None
+		results['total'] = None
+		results['pruned'] = None
+
+		return results
 	
 	
 	
@@ -96,6 +130,8 @@ class TSPSolver:
 	'''
 		
 	def branchAndBound( self, time_allowance=60.0 ):
+		bssf = self.defaultRandomTour(time_allowance)
+
 		pass
 
 

@@ -7,6 +7,10 @@ import random
 import time
 
 
+class StateObj:
+	def __init__(self):
+		self.rcm = {}
+		self.lowBound = math.inf
 
 class TSPSolution:
 	def __init__( self, listOfCities):
