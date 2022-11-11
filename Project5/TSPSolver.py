@@ -1,4 +1,5 @@
 #!/usr/bin/python3
+import copy
 import math
 
 from which_pyqt import PYQT_VER
@@ -127,6 +128,7 @@ class TSPSolver:
 		results['total'] = None
 		results['pruned'] = None
 
+		self.greedyBSSF = bssf
 		return results
 	
 	
@@ -139,11 +141,119 @@ class TSPSolver:
 		not include the initial BSSF), the best solution found, and three more ints: 
 		max queue size, total number of states created, and number of pruned states.</returns> 
 	'''
-		
-	def branchAndBound( self, time_allowance=60.0 ):
-		bssf = self.greedy(time_allowance)
 
-		pass
+	def genRCM(self):
+		cites = self._scenario.getCities()
+		mat = {}
+
+		for i in range(len(cites)):
+			for j in range(len(cites)):
+				mat[i,j] = cites[i].costTo(cites[j])
+
+		return self.reduceRCM(mat)
+
+	def reduceRCM(self, mat):
+		cites = self._scenario.getCities()
+		bound = 0
+
+		for i in range(len(cites)):
+			min = math.inf
+			for j in range(len(cites)):
+				if mat[i,j] < min:
+					min = mat[i,j]
+			if min == math.inf:
+				continue
+			for j in range(len(cites)):
+				mat[i,j] -= min
+			bound += min
+
+		for i in range(len(cites)):
+			min = math.inf
+			for j in range(len(cites)):
+				if mat[j,i] < min:
+					min = mat[j,i]
+			if min == math.inf:
+				continue
+			for j in range(len(cites)):
+				mat[j,i] -= min
+			bound += min
+
+		return mat, bound
+	def expand(self, state):
+		childStates = []
+		cities = self._scenario.getCities()
+		row = state.city._index
+
+		for col in range(len(cities)):
+			if state.contains(col):
+				continue
+
+			rcm = copy.deepcopy(state.rcm)
+			bound = state.lowBound
+			bound += rcm[row, col]
+
+			for i in range(len(cities)):
+				rcm[row, i] = math.inf
+				rcm[i, col] = math.inf
+			rcm[col, row] = math.inf
+
+			rcm, tmp = self.reduceRCM(rcm)
+			bound += tmp
+			childStates.append(StateObj(rcm, bound, cities[col], copy.deepcopy(state.route)))
+
+		return childStates
+
+	def test(self, state):
+		route = state.route
+		if len(route) < len(self._scenario.getCities()):
+			return math.inf
+		return TSPSolution(route).cost
+
+
+	def branchAndBound( self, time_allowance=60.0):
+		cities = self._scenario.getCities()
+		rcm, bound = self.genRCM()
+		startState = StateObj(rcm, bound, cities[0], []) #start at city index 0 and no route
+
+		queue = PrioQueue()
+		queue.insert(startState, bound)
+		self.greedy(time_allowance) #solid starting bssf, faster than random for more cities
+		bssf = self.greedyBSSF
+
+		maxSize = 0
+		totalStates = 0
+		prunedStates = 0
+		numSolutions = 0
+		start_time = time.time()
+
+		while not queue.isEmpty() and time.time()-start_time < time_allowance:
+			if queue.size() > maxSize:
+				maxSize = queue.size()
+			minState = queue.deleteMin()
+			if minState.lowBound < bssf.cost:
+				childStates = self.expand(minState)
+				for currState in childStates:
+					if self.test(currState) < math.inf:
+						numSolutions += 1
+					if self.test(currState) < bssf.cost:
+						bssf = TSPSolution(currState.route)
+					elif currState.lowBound < bssf.cost:
+						totalStates += 1
+						queue.insert(currState, currState.lowBound)
+					else:
+						prunedStates += 1
+
+		end_time = time.time()
+		results = {}
+		results['cost'] = bssf.cost
+		results['time'] = end_time - start_time
+		results['count'] = numSolutions
+		results['soln'] = bssf
+		results['max'] = maxSize
+		results['total'] = totalStates
+		results['pruned'] = prunedStates
+
+		return results
 
 
 

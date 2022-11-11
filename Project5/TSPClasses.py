@@ -8,9 +8,45 @@ import time
 
 
 class StateObj:
+	def __init__(self, rcm, bound, city, route):
+		self.rcm = rcm
+		self.lowBound = bound
+		self.city = city
+		self.route = route
+		self.route.append(city)
+
+	def contains(self, item):
+		for city in self.route:
+			if city._index == item:
+				return True
+		return False
+
+
+class PrioQueue:
 	def __init__(self):
-		self.rcm = {}
-		self.lowBound = math.inf
+		self.queue = {}
+	def insert(self, key, value):
+		self.queue[key] = value
+
+	def deleteMin(self):
+		minVal = math.inf
+		minKey = None
+
+		for key in self.queue:
+			if(self.queue[key] < minVal):
+				minVal = self.queue[key]
+				minKey = key
+
+		self.queue.pop(minKey)
+		return minKey
+
+	def size(self):
+		return len(self.queue)
+	def isEmpty(self):
+		if len(self.queue) > 0:
+			return False
+		else:
+			return True
 
 class TSPSolution:
 	def __init__( self, listOfCities):
