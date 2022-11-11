@@ -68,6 +68,7 @@ class TSPSolver:
 		results['max'] = None
 		results['total'] = None
 		results['pruned'] = None
+		self.randomBSSF = bssf
 		return results
 
 
@@ -209,6 +210,11 @@ class TSPSolver:
 			return math.inf
 		return TSPSolution(route).cost
 
+	def queueSize(self, queues):
+		total = 0;
+		for queue in queues:
+			total += queue.size()
+		return total
 
 	def branchAndBound( self, time_allowance=60.0):
 		cities = self._scenario.getCities()
@@ -217,8 +223,8 @@ class TSPSolver:
 
 		queue = PrioQueue()
 		queue.insert(startState, bound)
-		self.greedy(time_allowance) #solid starting bssf, faster than random for more cities
-		bssf = self.greedyBSSF
+		levelQueues = []
+		levelQueues.append(queue)
 
 		maxSize = 0
 		totalStates = 0
@@ -226,9 +232,24 @@ class TSPSolver:
 		numSolutions = 0
 		start_time = time.time()
 
-		while not queue.isEmpty() and time.time()-start_time < time_allowance:
-			if queue.size() > maxSize:
-				maxSize = queue.size()
+		self.greedy(time_allowance) #solid starting bssf, faster than random for more cities
+		bssf = self.greedyBSSF
+		while not len(levelQueues) == 0 and time.time()-start_time < time_allowance:
+			totSize = self.queueSize(levelQueues)
+			if totSize > maxSize:
+				maxSize = totSize
+			queue = levelQueues[len(levelQueues)-1]
+			newLevel = PrioQueue()
+			empty = False
+			while queue.isEmpty():
+				levelQueues.pop(len(levelQueues)-1)
+				if len(levelQueues) == 0:
+					empty = True
+					break
+				queue = levelQueues[len(levelQueues) - 1]
+			if empty:
+				continue
+
 			minState = queue.deleteMin()
 			if minState.lowBound < bssf.cost:
 				childStates = self.expand(minState)
@@ -239,9 +260,10 @@ class TSPSolver:
 						bssf = TSPSolution(currState.route)
 					elif currState.lowBound < bssf.cost:
 						totalStates += 1
-						queue.insert(currState, currState.lowBound)
+						newLevel.insert(currState, currState.lowBound)
 					else:
 						prunedStates += 1
+				levelQueues.append(newLevel)
 
 		end_time = time.time()
 		results = {}
