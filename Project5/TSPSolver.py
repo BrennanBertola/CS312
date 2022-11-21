@@ -272,7 +272,7 @@ class TSPSolver:
 		results['count'] = numSolutions
 		results['soln'] = bssf
 		results['max'] = maxSize
-		results['total'] = totalStates
+		results['total'] = totalStates + prunedStates
 		results['pruned'] = prunedStates
 
 		return results
