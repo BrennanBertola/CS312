@@ -143,7 +143,7 @@ class TSPSolver:
 		max queue size, total number of states created, and number of pruned states.</returns> 
 	'''
 
-	def genRCM(self):
+	def genRCM(self): #used to make initial reduce cost matrix
 		cites = self._scenario.getCities()
 		mat = {}
 
@@ -153,40 +153,41 @@ class TSPSolver:
 
 		return self.reduceRCM(mat)
 
-	def reduceRCM(self, mat):
+	def reduceRCM(self, mat): #is given a cost matrix to reduce
 		cites = self._scenario.getCities()
 		bound = 0
 
 		for i in range(len(cites)):
 			min = math.inf
-			for j in range(len(cites)):
+			for j in range(len(cites)): #finds the min value in each row
 				if mat[i,j] < min:
 					min = mat[i,j]
-			if min == math.inf:
+			if min == math.inf: #if entire row is is infinity no point in subtracting
 				continue
-			for j in range(len(cites)):
+			for j in range(len(cites)): #subtract min value from all other values in row
 				mat[i,j] -= min
 			bound += min
 
 		for i in range(len(cites)):
 			min = math.inf
-			for j in range(len(cites)):
+			for j in range(len(cites)): #finds the min value in each col
 				if mat[j,i] < min:
 					min = mat[j,i]
-			if min == math.inf:
+			if min == math.inf: #if entire col is is infinity no point in subtracting
 				continue
-			for j in range(len(cites)):
+			for j in range(len(cites)): #subtract min value from all other values in col
+				mat[i,j] -= min
 				mat[j,i] -= min
 			bound += min
 
 		return mat, bound
-	def expand(self, state):
+	def expand(self, state): #expands given state by generateing possible children states
 		childStates = []
 		cities = self._scenario.getCities()
 		row = state.city._index
 
-		for col in range(len(cities)):
-			if state.contains(col):
+		for col in range(len(cities)): #generates the cost matrix for each child state
+			if state.contains(col): #if city is already visted in the current state don't generate a child state
 				continue
 
 			rcm = copy.deepcopy(state.rcm)
@@ -200,17 +201,17 @@ class TSPSolver:
 
 			rcm, tmp = self.reduceRCM(rcm)
 			bound += tmp
-			childStates.append(StateObj(rcm, bound, cities[col], copy.deepcopy(state.route)))
+			childStates.append(StateObj(rcm, bound, cities[col], copy.deepcopy(state.route))) #creates and stores child
 
 		return childStates
 
-	def test(self, state):
+	def test(self, state): #tests if state is a valid route
 		route = state.route
-		if len(route) < len(self._scenario.getCities()):
+		if len(route) < len(self._scenario.getCities()): #can't be a valid route if it hasn't visted all cities
 			return math.inf
 		return TSPSolution(route).cost
 
-	def queueSize(self, queues):
+	def queueSize(self, queues): #used to get the total states stored across all priority queues
 		total = 0;
 		for queue in queues:
 			total += queue.size()
@@ -227,7 +228,7 @@ class TSPSolver:
 		levelQueues.append(queue)
 
 		maxSize = 0
-		totalStates = 0
+		totalStates = 1 #starts at one because we start with one state
 		prunedStates = 0
 		numSolutions = 0
 		start_time = time.time()
@@ -236,35 +237,38 @@ class TSPSolver:
 		bssf = self.greedyBSSF
 		while not len(levelQueues) == 0 and time.time()-start_time < time_allowance:
 			totSize = self.queueSize(levelQueues)
-			if totSize > maxSize:
+			if totSize > maxSize: #checks if curr size is bigger than max size
 				maxSize = totSize
-			queue = levelQueues[len(levelQueues)-1]
+			queue = levelQueues[len(levelQueues)-1] #curr queue is set to lowest level queue to enforce digging
 			newLevel = PrioQueue()
 			empty = False
-			while queue.isEmpty():
+			while queue.isEmpty(): #if curr queue has no more states remove it from array of queues and try again
 				levelQueues.pop(len(levelQueues)-1)
 				if len(levelQueues) == 0:
 					empty = True
 					break
 				queue = levelQueues[len(levelQueues) - 1]
-			if empty:
+			if empty: #if no more states continue to top while loop which will now exit
 				continue
 
 			minState = queue.deleteMin()
 			if minState.lowBound < bssf.cost:
 				childStates = self.expand(minState)
 				for currState in childStates:
-					if self.test(currState) < math.inf:
+					if self.test(currState) < bssf.cost: #we have found a better solution
 						numSolutions += 1
-					if self.test(currState) < bssf.cost:
 						bssf = TSPSolution(currState.route)
-					elif currState.lowBound < bssf.cost:
+					elif currState.lowBound < bssf.cost: #no solution yet but could still lead to a better solution
 						totalStates += 1
 						newLevel.insert(currState, currState.lowBound)
-					else:
+					else: #worse solution was found or it is no longer a possible solution
+						totalStates += 1
 						prunedStates += 1
 				levelQueues.append(newLevel)
+			else: #lower bound is no longer smaller then BSSF so the state is pruned
+				prunedStates += 1
 
+		prunedStates += self.queueSize(levelQueues) #add all the states that we didn't have time for
 		end_time = time.time()
 		results = {}
 		results['cost'] = bssf.cost
@@ -272,7 +276,7 @@ class TSPSolver:
 		results['count'] = numSolutions
 		results['soln'] = bssf
 		results['max'] = maxSize
-		results['total'] = totalStates + prunedStates
+		results['total'] = totalStates
 		results['pruned'] = prunedStates
 
 		return results
