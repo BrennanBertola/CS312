@@ -292,7 +292,7 @@ class TSPSolver:
 		algorithm</returns> 
 	'''
 
-	def antTraversal(self, colony,  startIndex = 0):
+	def antTraversal(self, colony, startIndex = 0):
 		#need alpha and beta values, visted array and cycle array
 		#add start city to visted and cycle array and set as current
 		#loop while until all cities are visted
@@ -303,10 +303,11 @@ class TSPSolver:
 		#return cycle(check for validity?)
 
 		pass
-	def fancy( self,time_allowance=60.0 ):
+
+	def fancy( self, time_allowance=60.0):
 		#create colony data structure
 		#for loop: number of updates/interations or time out
-			#for loop: ant Traversal
+			#for loop: ant Traversal w/ random start city?
 			#for loop: go over all cycles found, update bssf and pheromone
 		#return bssf
 		pass
