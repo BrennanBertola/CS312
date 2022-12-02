@@ -305,9 +305,6 @@ class TSPSolver:
 		cycle_array.append(start_city)
 
 		city_index = startIndex
-
-		#pheromone ** alpha / cost ** beta
-
 		#loop while until all cities are visted
 		while visited_array.__contains__(0):
 			routes_out = []
@@ -322,9 +319,9 @@ class TSPSolver:
 						routes_out.append(i)
 			if len(routes_out) == 0:
 				return None
+
 			#select next city based off of weights (random.choices)
 			next_city_index = random.choices(routes_out, pheromone_weights)[0]
-
 			#set next city as curr city and repeate
 			city_index = next_city_index
 			visited_array[city_index] = 1
@@ -380,9 +377,6 @@ class TSPSolver:
 					pheromoneMatrix[startIndex, endIndex] += updateVal
 					i += 1
 				pheromoneMatrix[cycle[i]._index, cycle[0]._index]
-
-
-
 
 		end_time = time.time()
 		results = {}
