@@ -5,8 +5,8 @@ import math
 from which_pyqt import PYQT_VER
 if PYQT_VER == 'PYQT5':
 	from PyQt5.QtCore import QLineF, QPointF
-elif PYQT_VER == 'PYQT4':
-	from PyQt4.QtCore import QLineF, QPointF
+# elif PYQT_VER == 'PYQT4':
+	# from PyQt4.QtCore import QLineF, QPointF
 else:
 	raise Exception('Unsupported Version of PyQt: {}'.format(PYQT_VER))
 
@@ -292,26 +292,110 @@ class TSPSolver:
 		algorithm</returns> 
 	'''
 
-	def antTraversal(self, colony, startIndex = 0):
-		#need alpha and beta values, visted array and cycle array
+	def antTraversal(self, cost_matrix, pheromone_matrix, startIndex = 0):
+		# need alpha and beta values, visited array and cycle array
+		alpha = .9
+		beta = 1.5
+		visited_array = np.zeros(len(self._scenario.getCities()))
+		cycle_array = []
+		cities = self._scenario.getCities()
+		start_city = cities[startIndex]
 		#add start city to visted and cycle array and set as current
-		#loop while until all cities are visted
-			#loop looking at all out bound routes
-				#if unvisted city add to array and calculate pheromone weight
-			#select next city based off of weights (random.choices)
-			#set next city as curr city and repeate
-		#return cycle(check for validity?)
+		visited_array[startIndex] = 1
+		cycle_array.append(start_city)
 
-		pass
+		city_index = startIndex
+
+		#pheromone ** alpha / cost ** beta
+
+		#loop while until all cities are visted
+		while visited_array.__contains__(0):
+			routes_out = []
+			pheromone_weights = []
+
+			#loop looking at all out bound routes
+			for i in range(len(cities)):
+				#if unvisted city add to array and calculate pheromone weight
+				if visited_array[i] == 0:
+					if cost_matrix[city_index, i] < math.inf:
+						pheromone_weights.append((pheromone_matrix[city_index, i] ** alpha) / (cost_matrix[city_index, i] ** beta))
+						routes_out.append(i)
+			if len(routes_out) == 0:
+				return None
+			#select next city based off of weights (random.choices)
+			next_city_index = random.choices(routes_out, pheromone_weights)[0]
+
+			#set next city as curr city and repeate
+			city_index = next_city_index
+			visited_array[city_index] = 1
+			cycle_array.append(cities[city_index])
+		#return cycle(check for validity?)
+		if cycle_array[-1].costTo(cycle_array[1]) != np.inf:
+			solution = TSPSolution(cycle_array)
+			return solution
+		else:
+			return None
 
 	def fancy( self, time_allowance=60.0):
-		#create colony data structure
-		#for loop: number of updates/interations or time out
-			#for loop: ant Traversal w/ random start city?
-			#for loop: go over all cycles found, update bssf and pheromone
-		#return bssf
-		pass
-		
+		bssf = None
+		bssfCost = math.inf
+		antAmount = 10
+		maxIterations = 250
+
+		cities = self._scenario.getCities()
+		costMatrix = {}
+		pheromoneMatrix = {}
+		start_time = time.time()
+
+		for i in range(len(cities)):
+			for j in range(len(cities)):
+				costMatrix[i, j] = cities[i].costTo(cities[j]) + .000000001
+				pheromoneMatrix[i, j] = .001
+
+		numIterations = 0
+		while time.time() - start_time < time_allowance and numIterations < maxIterations:
+			numIterations += 1
+			solutions = []
+			for i in range(antAmount):
+				tmp = self.antTraversal(costMatrix, pheromoneMatrix, int(random.uniform(0, len(cities)-1)))
+				if tmp is not None and tmp.cost != math.inf:
+					solutions.append(tmp)
+
+			#Addition to algorithim, reduces updates needed and only updates based off of the better half of the solutions
+			solutions = sorted(solutions)
+			solutions = solutions[:len(solutions)//2]
+
+			for solution in solutions:
+				length = solution.cost
+				if length < bssfCost:
+					bssf = solution
+					bssfCost = length
+
+				updateVal = 100 / length
+				cycle = solution.route
+				i = 0
+				while i < len(cycle) - 1:
+					startIndex = cycle[i]._index
+					endIndex = cycle[i+1]._index
+					pheromoneMatrix[startIndex, endIndex] += updateVal
+					i += 1
+				pheromoneMatrix[cycle[i]._index, cycle[0]._index]
+
+
+
+
+		end_time = time.time()
+		results = {}
+		results['cost'] = bssf.cost
+		results['time'] = end_time - start_time
+		results['count'] = 0
+		results['soln'] = bssf
+		results['max'] = None
+		results['total'] = None
+		results['pruned'] = None
+
+		return results
+
 
 
 
